@@ -1,4 +1,12 @@
 /** @type {import('next').NextConfig} */
+
+const withTM = require("next-transpile-modules")([
+  "lodash-es",
+  "react-d3-speedometer"
+]);
+
+module.exports = withTM();
+
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
