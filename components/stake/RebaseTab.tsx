@@ -7,10 +7,39 @@ import { RedditTextField } from './RedditTextField';
 import { useMediaQuery } from 'react-responsive';
 // import ReactSpeedometer from "react-d3-speedometer"
 import Speedometer from './SpeedoMeter';
+import Erc20 from '../../abi/Erc20.json';
+import Nerd from '../../abi/NerdFaucetV2.json';
+import { useWeb3React } from "@web3-react/core";
+import { Web3Provider } from '@ethersproject/providers';
+import { Contract } from "@ethersproject/contracts";
+import { address } from 'utils/ethers.util';
+import { BigNumber } from '@web3-onboard/common/node_modules/ethers';
+import { formatEther } from 'ethers/lib/utils';
+
 
 const RebaseTab = () => {
   const [sellAmount, setSellAmount] = React.useState('0');
   const [buyAmount, setBuyAmount] = React.useState('0');
+  const [netDeposits, setNetDeposits] = React.useState('');
+  const [grossClaimed, setGrossClaimed] = React.useState('');
+  const [rebaseRate, setRebaseRate] = React.useState(0);
+  const [gfvDepletion, setGfvDepletion] = React.useState('');
+
+  const { library, account } = useWeb3React<Web3Provider>();
+  React.useEffect(() => {
+    async function getData() {
+      const nerd = new Contract(address['nerd'], Nerd.abi, library);
+      const data = await nerd.getNerdData(account);
+      setNetDeposits(formatEther(data[5]));
+      setGrossClaimed(formatEther(data[2]));
+      let nerdPercent = Number(data[4].toString());
+      nerdPercent = nerdPercent <= -33 ? 0 : (nerdPercent > 0 ? 2 : 2 * (33 - nerdPercent)/33);
+      setRebaseRate(nerdPercent);
+      const depletion = nerdPercent < 0 ? 'yes' : 'no';
+      setGfvDepletion(depletion);
+    }
+    getData();
+  }, []);
 
   const handleSellAmount = (e: any) => {
     e.target.value = e.target.value.toString().replace(",", ".").replace(" ", "");
@@ -261,7 +290,7 @@ const RebaseTab = () => {
               marginBottom: '10px'
             }}
           >
-            <Box
+            <Box 
               sx={{
                 width:'100%'
               }}>
@@ -335,7 +364,17 @@ const RebaseTab = () => {
             </Grid>
             <Grid item xs={4} md={6}>
               <Box>
-                -123.3211
+                { netDeposits }
+              </Box>
+            </Grid>
+            <Grid item xs={8} md={6}>
+              <Box>
+                Gross Claims
+              </Box>
+            </Grid>
+            <Grid item xs={4} md={6}>
+              <Box>
+                { grossClaimed }
               </Box>
             </Grid>
             <Grid item xs={8} md={6}>
@@ -352,7 +391,7 @@ const RebaseTab = () => {
             </Grid>
             <Grid item xs={4} md={6}>
               <Box>
-                0.2%
+                { `${rebaseRate}%` }
               </Box>
             </Grid>
             <Grid item xs={8} md={6}>
@@ -362,22 +401,12 @@ const RebaseTab = () => {
             </Grid>
             <Grid item xs={4} md={6}>
               <Box>
-                no
-              </Box>
-            </Grid>
-            <Grid item xs={8} md={6}>
-              <Box>
-                Depletion Amount
-              </Box>
-            </Grid>
-            <Grid item xs={4} md={6}>
-              <Box>
-                0 stake
+                { gfvDepletion }
               </Box>
             </Grid>
 	          <Grid item xs={12}>
               <Box style={{display: 'flex', justifyContent: 'center'}}>
-                <Speedometer />
+                <Speedometer minValue={0} maxValue={2} value={Number(rebaseRate)} />
               </Box>
             </Grid>
           </Grid>

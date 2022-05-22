@@ -5,8 +5,7 @@ import * as React from 'react';
 import CustomInput from './CustomInput';
 import { useMediaQuery } from 'react-responsive';
 import { address } from '../../utils/ethers.util';
-import { getAccount } from 'utils/account.utils';
-import { formatEther, parseEther } from 'ethers/lib/utils';
+import { formatEther } from 'ethers/lib/utils';
 import { BigNumber } from '@web3-onboard/common/node_modules/ethers';
 import Erc20 from '../../abi/Erc20.json';
 import Nerd from '../../abi/NerdFaucetV2.json';
@@ -22,13 +21,13 @@ const FaucetTab = () => {
   const [deposits, setDeposits] = React.useState('0');
   const [grossClaimed, setGrossClaimed] = React.useState('0');
   const [maxPayout, setMaxPayout] = React.useState('0');
-  const { library } = useWeb3React<Web3Provider>();
+  const [isApproved, setIsApproved] = React.useState(false);
+  const { library, account } = useWeb3React<Web3Provider>();
 
   React.useEffect(() => {
     async function getNerdData() {
       const nerd = new Contract(address['nerd'], Nerd.abi, library);
-      const userAddress = getAccount().address;
-      const data = await nerd.getNerdData(userAddress);
+      const data = await nerd.getNerdData(account);
       setNfv(formatEther(data[6]));
       setDeposits(formatEther(data[5]));
       setGrossClaimed(formatEther(data[3]));
@@ -37,14 +36,34 @@ const FaucetTab = () => {
     getNerdData();
   }, []);
 
+  const faucetClaim = async () => {
+    const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+    await nerd.faucetClaim();
+  }
+
+  const rebaseClaim = async () => {
+    const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+    await nerd.rebaseClaim();
+  }
+
+  const faucetCompound = async () => {
+    const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+    await nerd.compoundFaucet();
+  }
+
+  const rebaseCompound = async () => {
+    const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+    await nerd.compoundRebase();
+  }
+
   const deposit = async () => {
-    const userAddress = getAccount().address;
     const stakeToken = new Contract(address['$stake'], Erc20.abi, library?.getSigner());
-    const balance = await stakeToken.balanceOf(userAddress);
+    const balance = await stakeToken.balanceOf(account);
     await stakeToken.approve(address['nerd'], BigNumber.from(balance.toString()));
     stakeToken.once("Approval", () => {
+      setIsApproved(true);
       const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
-      nerd.deposit(BigNumber.from(balance.toString()), userAddress);
+      nerd.deposit(BigNumber.from(balance.toString()), account);
     });
   }
 
@@ -209,7 +228,7 @@ const FaucetTab = () => {
             <Grid item xs={isResp600?6:4}>
               <Button onClick={claim} color="secondary" fullWidth variant="contained"
                 sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}}>
-                Claim
+                Claim both
               </Button>
             </Grid>
             {
@@ -217,25 +236,47 @@ const FaucetTab = () => {
               <Grid item xs={4}>
                 <Button onClick={compoundFaucet} color="secondary" fullWidth variant="contained"
                   sx={{ fontSize:isResp520?'0.58rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}}>
-                    Compound
+                    Compound both
                   </Button>
               </Grid>
             }
             <Grid item xs={isResp600?6:4}>
               <Button onClick={deposit} color="secondary" fullWidth variant="contained"
                 sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}}>
-                Deposit
+                {
+                  isApproved ? 'Deposit' : 'Approve'
+                }
               </Button>
             </Grid>
             {
               isResp600 &&
               <Grid item xs={12}>
-                <Button color="secondary" fullWidth variant="contained"
+                <Button onClick={compoundFaucet} color="secondary" fullWidth variant="contained"
                   sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}}>
-                    Compound
+                    Compound both
                   </Button>
               </Grid>
             }
+            <Grid item xs={3}>
+              <Button sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}} onClick={faucetClaim} color="secondary" fullWidth variant="contained">
+                faucet claim
+              </Button>
+            </Grid>
+            <Grid item xs={3}>
+              <Button sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}} onClick={rebaseClaim} color="secondary" fullWidth variant="contained">
+                rebase claim
+              </Button>
+            </Grid>
+            <Grid item xs={3}>
+              <Button sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}} onClick={faucetCompound} color="secondary" fullWidth variant="contained">
+                faucet compound
+              </Button>
+            </Grid>
+            <Grid item xs={3}>
+              <Button sx={{ fontSize:isResp520?'0.68rem':isResp600?'0.875rem':isResp720?'0.62rem':'0.875rem'}} onClick={rebaseCompound} color="secondary" fullWidth variant="contained">
+                rebase compound
+              </Button>
+            </Grid>
           </Grid>
         </Box>
       </Grid>

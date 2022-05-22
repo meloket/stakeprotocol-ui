@@ -5,11 +5,63 @@ import SellIcon from '@mui/icons-material/Sell';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import SimpleAreaChart from '../common/SimpleAreaChart';
 import { useMediaQuery } from 'react-responsive';
-
+import Erc20 from '../../abi/Erc20.json';
+import Nerd from '../../abi/NerdFaucetV2.json';
+import { useWeb3React } from "@web3-react/core";
+import { Web3Provider } from '@ethersproject/providers';
+import { Contract } from "@ethersproject/contracts";
+import { address } from 'utils/ethers.util';
+import { BigNumber } from '@web3-onboard/common/node_modules/ethers';
+import { formatEther } from 'ethers/lib/utils';
 
 const OverviewTab = () => {
   const [sellAmount, setSellAmount] = React.useState('0');
   const [buyAmount, setBuyAmount] = React.useState('0');
+  const [totalStake, setTotalStake] = React.useState('');
+  const [nfv, setNfv] = React.useState('');
+  const [gfv, setGfv] = React.useState('');
+  const [refRewards, setRefRewards] = React.useState('');
+  const [flameBalance, setFlameBalance] = React.useState('');
+  const [totalPlayers, setTotalPlayers] = React.useState('');
+  const { library, account } = useWeb3React<Web3Provider>();
+
+  React.useEffect(() => {
+    async function getNerdData() {
+      const nerd = new Contract(address['nerd'], Nerd.abi, library);
+      const data = await nerd.getNerdData(account);
+      const totalDeposits = await nerd.total_deposits();
+      setTotalStake(formatEther(totalDeposits));
+      setNfv(formatEther(data[6]));
+      setGfv(formatEther(data[3]));
+      setRefRewards(formatEther(data[7]));
+      const flame = new Contract(address['$flame'], Erc20.abi, library);
+      const balance = await flame.balanceOf(account);
+      setFlameBalance(formatEther(balance));
+      const totalUsers = await nerd.total_users();
+      setTotalPlayers(totalUsers.toString());
+    }
+    getNerdData();
+  }, []);
+
+  const deposit = async () => {
+    const stakeToken = new Contract(address['$stake'], Erc20.abi, library?.getSigner());
+    const balance = await stakeToken.balanceOf(account);
+    await stakeToken.approve(address['nerd'], BigNumber.from(balance.toString()));
+    stakeToken.once("Approval", () => {
+      const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+      nerd.deposit(BigNumber.from(balance.toString()), account);
+    });
+  }
+
+  const compoundAll = async () => {
+    const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+    await nerd.compoundFaucet();
+  }
+
+  const claimAll = async () => {
+    const nerd = new Contract(address['nerd'], Nerd.abi, library?.getSigner());
+    await nerd.claim();
+  }
 
   const handleSellAmount = (e: any) => {
     e.target.value = e.target.value.toString().replace(",", ".").replace(" ", "");
@@ -93,7 +145,7 @@ const OverviewTab = () => {
                 justifyContent: 'center'
               }}
             >
-              123.3211
+              { totalStake }
             </Box>
             <Box
               sx={{
@@ -117,7 +169,7 @@ const OverviewTab = () => {
                   width: '50%'
                 }}
               >
-                <Button size="large" color="secondary" 
+                <Button onClick={claimAll} size="large" color="secondary" 
                   fullWidth variant="contained"
                   sx={{
                     fontSize:isResp520?'0.68rem':'0.9375rem',
@@ -131,7 +183,7 @@ const OverviewTab = () => {
                   width: '50%'
                 }}
               >
-                <Button size="large" color="secondary" 
+                <Button onClick={compoundAll} size="large" color="secondary" 
                 fullWidth variant="contained"
                 sx={{
                   fontSize:isResp520?'0.68rem':'0.9375rem',
@@ -142,7 +194,7 @@ const OverviewTab = () => {
               </Box>
             </Box>
             <Box sx={{ marginTop: '20px' }}>
-              <Button size="large" color="secondary" fullWidth variant="contained">Deposit</Button>
+              <Button onClick={deposit} size="large" color="secondary" fullWidth variant="contained">Deposit</Button>
             </Box>
           </Box>
         </Grid>
@@ -285,7 +337,8 @@ const OverviewTab = () => {
                             fontSize: isResp520?'13px':'16px',
                             fontWeight: isResp520?'400':'bold',
                             paddingTop: isResp520?'12px !important':'16px'
-                          }}>1,865,707
+                          }}>
+                            { nfv }
                         </Grid>
                         <Grid item xs={12} md={12}
                           sx={{
@@ -339,7 +392,8 @@ const OverviewTab = () => {
                             fontSize: isResp520?'13px':'16px',
                             fontWeight: isResp520?'400':'bold',
                             paddingTop: isResp520?'12px !important':'16px'
-                          }}>1,865,707
+                          }}>
+                            { gfv }
                         </Grid>
                         <Grid item xs={12} md={12}
                           sx={{
@@ -383,7 +437,8 @@ const OverviewTab = () => {
                             fontSize: isResp520?'13px':'16px',
                             fontWeight: isResp520?'400':'bold',
                             paddingTop: isResp520?'12px !important':'16px'
-                          }}>1,865,707
+                          }}>
+                            { refRewards }
                         </Grid>
                         <Grid item xs={12} md={12}
                           sx={{
@@ -427,7 +482,8 @@ const OverviewTab = () => {
                             fontSize: isResp520?'13px':'16px',
                             fontWeight: isResp520?'400':'bold',
                             paddingTop: isResp520?'12px !important':'16px'
-                          }}>707
+                          }}>
+                            { flameBalance }
                         </Grid>
                         <Grid item xs={12} md={12}
                           sx={{

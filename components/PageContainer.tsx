@@ -10,7 +10,6 @@ import walletConnectModule from "@web3-onboard/walletconnect";
 import { nodes } from "data/getRpc";
 import { useAuth, ConnectorNames } from "hooks/useAuth";
 import { useMediaQuery } from 'react-responsive';
-import { saveAccount } from "utils/account.utils";
 
 const drawerWidth = 240;
 const injected = injectedModule();
@@ -60,7 +59,6 @@ const PageContainer = (props: { children: ReactNode }) =>
   const connectWallet = async () =>
   {
     const wallets = await onboard.connectWallet();
-    saveAccount(wallets[0].accounts[0]);
     setUserAccount(wallets[ 0 ]);
   };
 
